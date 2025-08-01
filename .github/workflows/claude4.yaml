@@ -26,7 +26,7 @@ jobs:
         run: echo "${{ steps.ask.outputs.completion }}" > result-${{ matrix.run_id }}.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: results
+          name: results-${{ matrix.run_id }}
           path: result-${{ matrix.run_id }}.txt
 
   pick-best:
@@ -35,7 +35,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: results
+          pattern: results-*
+          merge-multiple: true
           path: menus
       - name: Build combined prompt file
         run: |
