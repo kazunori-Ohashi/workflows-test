@@ -78,12 +78,31 @@ jobs:
           prompt_file: prompt.txt
           model: claude-3-7-sonnet-20250219
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      - name: Let Claude pick best
-        run: echo "${{ steps.choose.outputs.result }}"
-      - name: Save chosen JSON
+      - name: Save chosen JSON from log
         run: |
-          printf '%s\n' "${{ steps.choose.outputs.result }}" > best.json
-          jq -e . best.json >/dev/null 2>&1 || echo "Warning: chosen output is not valid JSON"
+          jq --version >/dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y jq)
+          # Extract latest textual result from the action's execution log
+          jq -r '[.. | objects | select(.result? or .message?) | (.result // (.message.content[0].text // empty))] | last // ""' "$RUNNER_TEMP/claude-execution-output.json" > best_raw.txt
+          # Strip code fences if any
+          sed -i '/^```/d' best_raw.txt
+          # If it's valid JSON already, keep as-is; otherwise try to pull first JSON object from the text
+          if jq -e . best_raw.txt >/dev/null 2>&1; then
+            cp best_raw.txt best.json
+          else
+            python3 - <<'PY'
+import re, sys
+src = 'best_raw.txt'
+out = 'best.json'
+text = open(src, 'r', encoding='utf-8').read()
+m = re.search(r'\{[\s\S]*\}', text)
+open(out, 'w', encoding='utf-8').write((m.group(0) if m else text).strip())
+PY
+            if ! jq -e . best.json >/dev/null 2>&1; then
+              echo "Warning: chosen output is not valid JSON"
+            fi
+          fi
+          echo "----- best.json preview -----"
+          sed -n '1,120p' best.json || true
       - uses: actions/upload-artifact@v4
         with:
           name: best-selection
