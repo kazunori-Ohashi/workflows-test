@@ -23,6 +23,8 @@ jobs:
           model: sonnet-4
           anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       - name: Save reply
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: echo "${{ steps.ask.outputs.completion }}" > result-${{ matrix.run_id }}.txt
       - uses: actions/upload-artifact@v4
         with:
@@ -53,4 +55,7 @@ jobs:
             $MENUS
           model: sonnet-4
           anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      - run: echo "${{ steps.choose.outputs.completion }}"
+      - name: Let Claude pick best
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: echo "${{ steps.choose.outputs.completion }}"
