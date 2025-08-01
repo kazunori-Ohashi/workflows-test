@@ -20,11 +20,9 @@ jobs:
         with:
           prompt: |
             夏の日向きのさっぱりしたカレーのメニューを考えて
-          model: sonnet-4
+          model: claude-4-0-sonnet-20250219
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       - name: Save reply
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: echo "${{ steps.ask.outputs.completion }}" > result-${{ matrix.run_id }}.txt
       - uses: actions/upload-artifact@v4
         with:
@@ -39,21 +37,16 @@ jobs:
         with:
           name: results
           path: menus
-      - name: Read all menu files into environment
-        id: read_menus
+      - name: Build combined prompt file
         run: |
-          echo "MENUS<<EOF" >> $GITHUB_ENV
-          cat menus/*.txt >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          echo "以下のメニュー案から、最も甘みが少ないものを1つ選び、その理由も簡潔に述べてください。\n" > prompt.txt
+          cat menus/*.txt >> prompt.txt
       - name: Let Claude choose least-sweet
         id: choose
         uses: anthropics/claude-code-base-action@beta
         with:
-          prompt: |
-            以下のメニュー案から、最も甘みが少ないものを1つ選び、その理由も簡潔に述べてください。
-
-            $MENUS
-          model: sonnet-4
+          prompt_file: prompt.txt
+          model: claude-4-0-sonnet-20250219
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       - name: Let Claude pick best
         env:
