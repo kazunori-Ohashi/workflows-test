@@ -1,43 +1,45 @@
-name: Run Claude 4 times and select best
+name: Claude parallel + best pick
 
-on: [workflow_dispatch]
+on:
+  workflow_dispatch:
+
+env:  # ← APIキーはリポジトリSecretから渡す
+  CLAUDE_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
 jobs:
-  generate-menus:
+  generate:
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        run_id: [1, 2, 3, 4]
+      matrix: { run_id: [1,2,3,4] }
     steps:
-      - name: Set up Claude CLI
-        run: |
-          curl -s https://raw.githubusercontent.com/johnsmith101/claude-cli/main/install.sh | bash
-          echo "$HOME/.claude/bin" >> $GITHUB_PATH
-
-      - name: Run Claude Prompt for Menu
-        run: |
-          claude -p "夏の日向きのさっぱりしたカレーのメニューを考えて" --model Sonnet 4 > result-${{ matrix.run_id }}.txt
-
-      - name: Upload result
-        uses: actions/upload-artifact@v4
+      - name: Ask Claude for menus
+        id: ask
+        uses: anthropics/claude-code-base-action@v1
+        with:
+          prompt: |
+            夏の日向きのさっぱりしたカレーのメニューを考えて
+          model: sonnet-4
+      - name: Save reply
+        run: echo "${{ steps.ask.outputs.completion }}" > result-${{ matrix.run_id }}.txt
+      - uses: actions/upload-artifact@v4
         with:
           name: results
           path: result-${{ matrix.run_id }}.txt
 
-  evaluate-menu:
+  pick-best:
+    needs: generate
     runs-on: ubuntu-latest
-    needs: generate-menus
     steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
+        with: { name: results, path: menus }
+      - name: Let Claude choose least-sweet
+        id: choose
+        uses: anthropics/claude-code-base-action@v1
         with:
-          name: results
-          path: all_results
+          prompt: |
+            以下のメニュー案から最も甘みが少ないものを1つ選び、その理由を簡潔に述べてください。
 
-      - name: Concatenate for evaluation
-        run: |
-          cat all_results/*.txt > all_menus.txt
-
-      - name: Let Claude pick best
-        run: |
-          claude -p "以下のカレーメニュー案の中で、最も甘みが少ないと思われるものを1つ選び、理由も簡単に述べてください:\n\n$(cat all_menus.txt)" --model Sonnet 4
+            <<MENUS>>
+          files: menus/*.txt   # ← <<MENUS>> に自動インライン
+          model: sonnet-4
+      - run: echo "${{ steps.choose.outputs.completion }}"
