@@ -20,7 +20,7 @@ jobs:
         with:
           prompt: |
             夏の日向きのさっぱりしたカレーのメニューを考えて
-          model: claude-4-0-sonnet-20250219
+          model: Sonnet 4
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       - name: Save reply
         run: echo "${{ steps.ask.outputs.completion }}" > result-${{ matrix.run_id }}.txt
