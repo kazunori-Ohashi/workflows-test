@@ -9,6 +9,11 @@ jobs:
       matrix:
         run_id: [1, 2, 3, 4]
     steps:
+      - name: Set up Claude CLI
+        run: |
+          curl -s https://raw.githubusercontent.com/johnsmith101/claude-cli/main/install.sh | bash
+          echo "$HOME/.claude/bin" >> $GITHUB_PATH
+
       - name: Run Claude Prompt for Menu
         run: |
           claude -p "夏の日向きのさっぱりしたカレーのメニューを考えて" --model Sonnet 4 > result-${{ matrix.run_id }}.txt
