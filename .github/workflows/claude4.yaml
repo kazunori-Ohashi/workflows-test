@@ -23,7 +23,7 @@ jobs:
           model: claude-3-7-sonnet-20250219
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       - name: Save reply
-        run: echo "${{ steps.ask.outputs.completion }}" > result-${{ matrix.run_id }}.txt
+        run: echo "${{ steps.ask.outputs.result }}" > result-${{ matrix.run_id }}.txt
       - uses: actions/upload-artifact@v4
         with:
           name: results-${{ matrix.run_id }}
@@ -50,4 +50,4 @@ jobs:
           model: claude-3-7-sonnet-20250219
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       - name: Let Claude pick best
-        run: echo "${{ steps.choose.outputs.completion }}"
+        run: echo "${{ steps.choose.outputs.result }}"
