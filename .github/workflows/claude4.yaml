@@ -25,7 +25,7 @@ jobs:
       - name: Save reply from JSON log
         run: |
           jq --version >/dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y jq)
-          jq -r '.result // (.message.content[0].text // "")' "$RUNNER_TEMP/claude-execution-output.json" > result-${{ matrix.run_id }}.txt
+          jq -r '[.. | objects | select(.result? or .message?) | (.result // (.message.content[0].text // empty))] | last // ""' "$RUNNER_TEMP/claude-execution-output.json" > result-${{ matrix.run_id }}.txt
           echo "Saved $(wc -c < result-${{ matrix.run_id }}.txt) bytes to result-${{ matrix.run_id }}.txt"
       - uses: actions/upload-artifact@v4
         with:
