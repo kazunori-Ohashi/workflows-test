@@ -19,18 +19,35 @@ jobs:
         uses: anthropics/claude-code-base-action@beta
         with:
           prompt: |
-            夏の日向きのさっぱりしたカレーのメニューを考えて
+            あなたは料理家です。夏向けで甘みが少なく、さっぱり食べられるカレーを1つ考えてください。
+            出力は以下のJSONオブジェクトのみ（Markdownや前置き・コードフェンスは禁止）。日本語で記述：
+            {
+              "name": string,
+              "method": string,
+              "features": [string, ...],
+              "ingredients": [string, ...],
+              "spice_profile": {
+                "sweetness": number,
+                "acidity": number,
+                "heat": number
+              }
+            }
+            制約:
+            - 砂糖/はちみつ/果物/ココナッツミルク等の甘味要素は避けるか最小限。
+            - 必ずJSONのみ返す（余計な文字やコードフェンスは禁止）。
           model: claude-3-7-sonnet-20250219
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       - name: Save reply from JSON log
         run: |
           jq --version >/dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y jq)
-          jq -r '[.. | objects | select(.result? or .message?) | (.result // (.message.content[0].text // empty))] | last // ""' "$RUNNER_TEMP/claude-execution-output.json" > result-${{ matrix.run_id }}.txt
-          echo "Saved $(wc -c < result-${{ matrix.run_id }}.txt) bytes to result-${{ matrix.run_id }}.txt"
+          TEXT=$(jq -r '[.. | objects | select(.result? or .message?) | (.result // (.message.content[0].text // empty))] | last // ""' "$RUNNER_TEMP/claude-execution-output.json")
+          printf '%s\n' "$TEXT" | sed '/^```/d' > tmp.json
+          jq -e . tmp.json > result-${{ matrix.run_id }}.json
+          echo "Saved $(wc -c < result-${{ matrix.run_id }}.json) bytes to result-${{ matrix.run_id }}.json"
       - uses: actions/upload-artifact@v4
         with:
           name: results-${{ matrix.run_id }}
-          path: result-${{ matrix.run_id }}.txt
+          path: result-${{ matrix.run_id }}.json
 
   pick-best:
     needs: generate
@@ -43,10 +60,14 @@ jobs:
           path: menus
       - name: Build combined prompt file
         run: |
+          jq -s 'flatten' menus/*.json > combined.json
           {
-            echo "以下のメニュー案から、最も甘みが少ないものを1つ選び、その理由も簡潔に述べてください。";
+            echo "次のJSON配列は4つのカレーレシピ候補です（同一スキーマ）。最も甘みが少ない（spice_profile.sweetness 最小。同点は acidity 高い方を優先）ものを1つ選び、以下のJSONのみ返してください（説明文やMarkdownは禁止）。";
             echo;
-            cat menus/*.txt;
+            echo "出力スキーマ例（説明目的。実際は有効なJSONオブジェクトのみ返す）: {\"selected_name\": string, \"reason\": string, \"selected\": object}";
+            echo;
+            echo "JSON配列:";
+            cat combined.json;
           } > prompt.txt
           echo "----- prompt.txt preview -----"
           sed -n '1,200p' prompt.txt
@@ -59,3 +80,11 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       - name: Let Claude pick best
         run: echo "${{ steps.choose.outputs.result }}"
+      - name: Save chosen JSON
+        run: |
+          printf '%s\n' "${{ steps.choose.outputs.result }}" > best.json
+          jq -e . best.json >/dev/null 2>&1 || echo "Warning: chosen output is not valid JSON"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: best-selection
+          path: best.json
