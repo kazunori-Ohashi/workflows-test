@@ -1,20 +1,25 @@
 name: Claude parallel + best pick
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 env:  # ← APIキーはリポジトリSecretから渡す
-  CLAUDE_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+  CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
 jobs:
   generate:
     runs-on: ubuntu-latest
     strategy:
-      matrix: { run_id: [1,2,3,4] }
+      matrix:
+        run_id:
+          - 1
+          - 2
+          - 3
+          - 4
     steps:
       - name: Ask Claude for menus
         id: ask
-        uses: anthropics/claude-code-base-action@v1
+        uses: anthropics/claude-code-base-action@beta
         with:
           prompt: |
             夏の日向きのさっぱりしたカレーのメニューを考えて
@@ -31,15 +36,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
-        with: { name: results, path: menus }
+        with:
+          name: results
+          path: menus
+      - name: Read all menu files into environment
+        id: read_menus
+        run: |
+          echo "MENUS<<EOF" >> $GITHUB_ENV
+          cat menus/*.txt >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
       - name: Let Claude choose least-sweet
         id: choose
-        uses: anthropics/claude-code-base-action@v1
+        uses: anthropics/claude-code-base-action@beta
         with:
           prompt: |
-            以下のメニュー案から最も甘みが少ないものを1つ選び、その理由を簡潔に述べてください。
+            以下のメニュー案から、最も甘みが少ないものを1つ選び、その理由も簡潔に述べてください。
 
-            <<MENUS>>
-          files: menus/*.txt   # ← <<MENUS>> に自動インライン
+            $MENUS
           model: sonnet-4
       - run: echo "${{ steps.choose.outputs.completion }}"
