@@ -22,8 +22,11 @@ jobs:
             夏の日向きのさっぱりしたカレーのメニューを考えて
           model: claude-3-7-sonnet-20250219
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      - name: Save reply
-        run: echo "${{ steps.ask.outputs.result }}" > result-${{ matrix.run_id }}.txt
+      - name: Save reply from JSON log
+        run: |
+          jq --version >/dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y jq)
+          jq -r '.result // (.message.content[0].text // "")' "$RUNNER_TEMP/claude-execution-output.json" > result-${{ matrix.run_id }}.txt
+          echo "Saved $(wc -c < result-${{ matrix.run_id }}.txt) bytes to result-${{ matrix.run_id }}.txt"
       - uses: actions/upload-artifact@v4
         with:
           name: results-${{ matrix.run_id }}
@@ -40,8 +43,13 @@ jobs:
           path: menus
       - name: Build combined prompt file
         run: |
-          echo "以下のメニュー案から、最も甘みが少ないものを1つ選び、その理由も簡潔に述べてください。\n" > prompt.txt
-          cat menus/*.txt >> prompt.txt
+          {
+            echo "以下のメニュー案から、最も甘みが少ないものを1つ選び、その理由も簡潔に述べてください。";
+            echo;
+            cat menus/*.txt;
+          } > prompt.txt
+          echo "----- prompt.txt preview -----"
+          sed -n '1,200p' prompt.txt
       - name: Let Claude choose least-sweet
         id: choose
         uses: anthropics/claude-code-base-action@beta
