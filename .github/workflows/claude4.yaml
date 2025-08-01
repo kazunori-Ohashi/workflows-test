@@ -20,7 +20,7 @@ jobs:
         with:
           prompt: |
             夏の日向きのさっぱりしたカレーのメニューを考えて
-          model: Sonnet 4
+          model: claude-3-7-sonnet-20250219
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       - name: Save reply
         run: echo "${{ steps.ask.outputs.completion }}" > result-${{ matrix.run_id }}.txt
@@ -46,9 +46,7 @@ jobs:
         uses: anthropics/claude-code-base-action@beta
         with:
           prompt_file: prompt.txt
-          model: Sonnet 4
+          model: claude-3-7-sonnet-20250219
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       - name: Let Claude pick best
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: echo "${{ steps.choose.outputs.completion }}"
