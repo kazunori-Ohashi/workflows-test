@@ -11,27 +11,24 @@ jobs:
   create-artifact:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Create file
-        run: |
-          echo "This is a test file for artifact transfer." > artifact-test.txt
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/checkout@v4
+      - run: echo "artifact content" > artifact-test.txt
+      - uses: actions/upload-artifact@v4
         with:
           name: test-artifact
           path: artifact-test.txt
 
   download-artifact:
-    runs-on: ubuntu-latest
     needs: create-artifact
+    runs-on: ubuntu-latest
     steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: test-artifact
-
-      - name: Show file content
-        run: cat artifact-test.txt
+          path: downloaded
+      - name: Verify artifact content
+        run: |
+          echo "Contents of downloaded:"
+          cat downloaded/artifact-test.txt
+          echo "List directory:"
+          ls -l downloaded/
