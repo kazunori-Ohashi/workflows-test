@@ -35,7 +35,7 @@ jobs:
             制約:
             - 砂糖/はちみつ/果物/ココナッツミルク等の甘味要素は避けるか最小限。
             - 必ずJSONのみ返す（余計な文字やコードフェンスは禁止）。
-          model: claude-3-7-sonnet-20250219
+          model: claude-sonnet-4-20250514
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       - name: Save reply from JSON log
         run: |
@@ -76,7 +76,7 @@ jobs:
         uses: anthropics/claude-code-base-action@beta
         with:
           prompt_file: prompt.txt
-          model: claude-3-7-sonnet-20250219
+          model: claude-sonnet-4-20250514
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       - name: Save chosen JSON from log
         run: |
